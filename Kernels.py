@@ -96,8 +96,6 @@ int S, int N, double dz)
 }
 
 
-double Pow(
-
 double CalcEnext(
 double k,
 __global double* E_next,
