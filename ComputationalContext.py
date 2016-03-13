@@ -6,6 +6,7 @@ from DispersionIndex import DispersionIndex
 from OpenCLSettings import OpenCLSettings
 from Environment import PhysicalEnvironment
 from ZStepStrategies.AdaptiveZStepStrategy import AdaptiveZStepStrategy
+from ZStepStrategies.UniformZStepStrategy import UniformZStepStrategy
 from Grid import Grid
 from pyfft.cl import Plan
 
@@ -25,10 +26,10 @@ class ComputationalContext:
         self.z_limit = Settings.z
         self.dz = Settings.dz
         self.current_dz = numpy.float64()
-        self.calculatedDz = Settings.dz
+        self.calculated_dz = Settings.dz
 
         if Settings.z_strategy == "Uniform":
-            self.z_step_strategy = 0
+            self.z_step_strategy = UniformZStepStrategy()
         else:
             self.z_step_strategy = AdaptiveZStepStrategy()
 
@@ -89,10 +90,10 @@ class ComputationalContext:
         self.layer += 1
 
     def updateDz(self):
-        if self.calculatedDz < 0:
-            self.calculatedDz = Settings.dz
+        if self.calculated_dz < 0:
+            self.calculated_dz = Settings.dz
 
-        dz = self.calculatedDz
+        dz = self.calculated_dz
         if self.z_limit < self.Z + dz:
             dz = self.z_limit - self.Z
 
@@ -106,7 +107,7 @@ class ComputationalContext:
 
         while True:
             if dz < 0:
-                self.calculatedDz = self.z_step_strategy.calculateDz(self.calculatedDz, self.global_iteration_number)
+                self.calculated_dz = self.z_step_strategy.calculateDz(self.calculated_dz, self.global_iteration_number)
                 self.updateDz()
             else:
                 self.current_dz = dz
@@ -133,11 +134,11 @@ class ComputationalContext:
             self.ocl.prg.Diff(self.ocl.queue, (self.grid.time_size,), None,
                               self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
                               self.space_buf, self.space_delta_buf, self.D_buf,
-                              self.grid.space_size, self.grid.time_size, self.dz)
+                              self.grid.space_size, self.grid.time_size, self.current_dz)
 
         # Применяем оператор дисперсии
         self.ocl.prg.Disp(self.ocl.queue, self.field_shape, None,
-                          self.K_buf, self.field_buf, self.dz, self.grid.space_size, self.grid.time_size)
+                          self.K_buf, self.field_buf, self.current_dz, self.grid.space_size, self.grid.time_size)
 
         # Прямое преобразование Фурье
         self.plan1D.execute(self.field_buf, batch=self.grid.space_size, inverse=False)
@@ -172,7 +173,7 @@ class ComputationalContext:
             # self.ocl.prg.FindMaxIteration(self.ocl.queue, (1,), None, self.grid.space_size,
             #                              self.global_iteration_number_buf, self.unlinear_iterations_buf)
             #
-            # cl.enqueue_copy(self.ocl.queue, self.global_iteration_number, self.global_iteration_number_buf)
+            # cl.enqueue_copy(self.ocl.queue, test_real, self.field_buf_real)
 
             self.ocl.prg.DoubleToComplex(self.ocl.queue, self.field_shape, None,
                                          self.field_buf, self.field_buf_real,
