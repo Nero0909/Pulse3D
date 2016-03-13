@@ -20,7 +20,7 @@ def main():
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
 
     onlyPlot = False
-    deserializer = Deserializer('LBProjects/adaptive_unl')
+    deserializer = Deserializer('LBProjects/adaptive_full')
     deserializer.deserialize(Settings)
     Settings.toFemtoseconds()
 

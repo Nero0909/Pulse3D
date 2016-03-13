@@ -37,7 +37,6 @@ class ComputationalContext:
         self.unlinear_iterations = numpy.zeros(self.grid.space_size, dtype=numpy.int32)
 
         self.E_next = numpy.zeros((self.grid.space_size, self.grid.time_size), dtype=numpy.float64)
-        # Переписать в ядра!
         self.D = numpy.zeros(self.grid.time_size, dtype=numpy.float64)
         self.K = numpy.zeros(self.grid.time_size, dtype=numpy.float64)
 
@@ -75,9 +74,9 @@ class ComputationalContext:
     def fillData(self):
         self.computeD(self.D)
         self.computeK(self.K)
-        self.ocl.prg.ComputeA(self.ocl.queue, self.grid.space_grid.shape, None,
-                              self.A1_buf, self.A2_buf, self.A3_buf, self.space_buf, self.space_delta_buf,
-                              self.grid.space_size)
+        self.ocl.initial_prg.ComputeA(self.ocl.queue, self.grid.space_grid.shape, None,
+                                      self.A1_buf, self.A2_buf, self.A3_buf, self.space_buf, self.space_delta_buf,
+                                      self.grid.space_size)
 
         cl.enqueue_copy(self.ocl.queue, self.D_buf, self.D)
         cl.enqueue_copy(self.ocl.queue, self.K_buf, self.K)
@@ -119,7 +118,7 @@ class ComputationalContext:
                 break
             iteration_number += 1
 
-            if not(dz < 0 and self.z_step_strategy.needUpdateDz(self.global_iteration_number)):
+            if not (dz < 0 and self.z_step_strategy.needUpdateDz(self.global_iteration_number)):
                 break
 
         self.updateZ()
@@ -131,14 +130,14 @@ class ComputationalContext:
 
         if Settings.use_difraction:
             # Применяем оператор дифракции
-            self.ocl.prg.Diff(self.ocl.queue, (self.grid.time_size,), None,
-                              self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
-                              self.space_buf, self.space_delta_buf, self.D_buf,
-                              self.grid.space_size, self.grid.time_size, self.current_dz)
+            self.ocl.linear_prg.Diff(self.ocl.queue, (self.grid.time_size,), None,
+                                     self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
+                                     self.space_buf, self.space_delta_buf, self.D_buf,
+                                     self.grid.space_size, self.grid.time_size, self.current_dz)
 
         # Применяем оператор дисперсии
-        self.ocl.prg.Disp(self.ocl.queue, self.field_shape, None,
-                          self.K_buf, self.field_buf, self.current_dz, self.grid.space_size, self.grid.time_size)
+        self.ocl.linear_prg.Disp(self.ocl.queue, self.field_shape, None,
+                                 self.K_buf, self.field_buf, self.current_dz, self.grid.space_size, self.grid.time_size)
 
         # Прямое преобразование Фурье
         self.plan1D.execute(self.field_buf, batch=self.grid.space_size, inverse=False)
@@ -157,14 +156,14 @@ class ComputationalContext:
             # test_real = numpy.zeros((self.grid.space_size, self.grid.time_size), dtype=numpy.float64)
             # cl.enqueue_copy(self.ocl.queue, test_complex, self.field_buf)
             # cl.enqueue_copy(self.ocl.queue, test_complex, self.field_buf)
-            self.ocl.prg.ComplexToDouble(self.ocl.queue, self.field_shape, None,
-                                         self.field_buf, self.field_buf_real,
-                                         self.grid.space_size, self.grid.time_size)
+            self.ocl.nonlinear_prg.ComplexToDouble(self.ocl.queue, self.field_shape, None,
+                                                   self.field_buf, self.field_buf_real,
+                                                   self.grid.space_size, self.grid.time_size)
 
-            self.ocl.prg.CubicUnlinean1DSolve(self.ocl.queue, (self.grid.space_size, 1), None,
-                                              self.field_buf_real, self.e_next_buf, self.e_05_buf,
-                                              self.unlinear_iterations_buf,
-                                              k, dt, max_error, iteration, self.grid.time_size)
+            self.ocl.nonlinear_prg.CubicUnlinean1DSolve(self.ocl.queue, (self.grid.space_size, 1), None,
+                                                        self.field_buf_real, self.e_next_buf, self.e_05_buf,
+                                                        self.unlinear_iterations_buf,
+                                                        k, dt, max_error, iteration, self.grid.time_size)
 
             cl.enqueue_copy(self.ocl.queue, self.unlinear_iterations, self.unlinear_iterations_buf)
 
@@ -175,9 +174,9 @@ class ComputationalContext:
             #
             # cl.enqueue_copy(self.ocl.queue, test_real, self.field_buf_real)
 
-            self.ocl.prg.DoubleToComplex(self.ocl.queue, self.field_shape, None,
-                                         self.field_buf, self.field_buf_real,
-                                         self.grid.space_size, self.grid.time_size)
+            self.ocl.nonlinear_prg.DoubleToComplex(self.ocl.queue, self.field_shape, None,
+                                                   self.field_buf, self.field_buf_real,
+                                                   self.grid.space_size, self.grid.time_size)
 
     def copyFromBuffer(self, field):
         cl.enqueue_copy(self.ocl.queue, field, self.field_buf)
