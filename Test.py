@@ -5,8 +5,9 @@ import os
 
 def main():
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-    N = numpy.int32(8)
-    S = numpy.int32(4)
+    N = numpy.int32(128)
+    S = numpy.int32(64)
+
     mutableVar = numpy.zeros(1, dtype=numpy.float64)
 
     platform = cl.get_platforms()[0]
@@ -50,6 +51,7 @@ def main():
                       __global double *iterations)
     {
         int x = get_global_id(0);
+        int loc_id = get_local_id(0);
 
         double max = iterations[0];
         for(int i=1; i < size; i++)
