@@ -160,11 +160,12 @@ class ComputationalContext:
                                                    self.field_buf, self.field_buf_real,
                                                    self.grid.space_size, self.grid.time_size)
 
-            self.ocl.nonlinear_prg.CubicUnlinean1DSolve(self.ocl.queue, (self.grid.space_size, 1), None,
+            evt = self.ocl.nonlinear_prg.CubicUnlinean1DSolve(self.ocl.queue, (self.grid.space_size, 1), None,
                                                         self.field_buf_real, self.e_next_buf, self.e_05_buf,
                                                         self.unlinear_iterations_buf,
                                                         k, dt, max_error, iteration, self.grid.time_size)
-
+            evt.wait()
+            print evt.profile.end - evt.profile.start
             cl.enqueue_copy(self.ocl.queue, self.unlinear_iterations, self.unlinear_iterations_buf)
 
             self.global_iteration_number = numpy.ndarray.max(self.unlinear_iterations)

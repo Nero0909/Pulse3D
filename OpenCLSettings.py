@@ -1,7 +1,4 @@
 import pyopencl as cl
-from Kernels.InitialDataKernels import kernels as initialKernels
-from Kernels.LinearKernels import kernels as linearKernels
-from Kernels.NonlinearKernels import kernels as nonlinearKernels
 from Singleton import Singleton
 
 @Singleton
@@ -17,9 +14,17 @@ class OpenCLSettings:
         self.ctx = cl.Context([self.device])
 
         # Initialize command-queue
-        self.queue = cl.CommandQueue(self.ctx)
+        self.queue = cl.CommandQueue(self.ctx, properties=cl.command_queue_properties.PROFILING_ENABLE)
+
+        # Read kernels from .cl files
+        with open('Kernels\NonlinearKernels.cl') as f:
+            nonlinear_kernels = f.read()
+        with open('Kernels\LinearKernels.cl') as f:
+            linear_kernels = f.read()
+        with open('Kernels\InitialDataKernels.cl') as f:
+            initial_kernels = f.read()
 
         # Compile program
-        self.initial_prg = cl.Program(self.ctx, initialKernels).build()
-        self.linear_prg = cl.Program(self.ctx, linearKernels).build()
-        self.nonlinear_prg = cl.Program(self.ctx, nonlinearKernels).build()
+        self.initial_prg = cl.Program(self.ctx, initial_kernels).build()
+        self.linear_prg = cl.Program(self.ctx, linear_kernels).build()
+        self.nonlinear_prg = cl.Program(self.ctx, nonlinear_kernels).build()

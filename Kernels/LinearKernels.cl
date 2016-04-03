@@ -1,4 +1,3 @@
-kernels = """
 #if defined(cl_khr_fp64)
     #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #elif defined(cl_amd_fp64)
@@ -108,4 +107,3 @@ int S)
 
     Field[ind] = cdouble_conj(Field[ind]);
 }
-"""
