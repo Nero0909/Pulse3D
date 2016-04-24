@@ -58,6 +58,11 @@ class ComputationalContext:
         # self.global_iteration_number_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE, self.global_iteration_number.nbytes)
         self.unlinear_iterations_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE, self.unlinear_iterations.nbytes)
 
+        self.nlnr_computing_time = numpy.float64(0)
+        self.diff_computing_time = numpy.float64(0)
+        self.disp_computing_time = numpy.float64(0)
+        self.copy_computing_time = numpy.float64(0)
+
     def computeK(self, K):
         ng = self.dispIndex.n(self.physConst.w) + self.dispIndex.dng(self.physConst.w)
         for i in range(self.grid.time_size):
@@ -130,54 +135,41 @@ class ComputationalContext:
 
         if Settings.use_difraction:
             # Применяем оператор дифракции
-            self.ocl.linear_prg.Diff(self.ocl.queue, (self.grid.time_size,), None,
-                                     self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
-                                     self.space_buf, self.space_delta_buf, self.D_buf,
-                                     self.grid.space_size, self.grid.time_size, self.current_dz)
+            dif_evt = self.ocl.linear_prg.Diff(self.ocl.queue, (self.grid.time_size, 1), None,
+                                               self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
+                                               self.space_buf, self.space_delta_buf, self.D_buf,
+                                               self.grid.space_size, self.grid.time_size, self.current_dz)
+            dif_evt.wait()
+            self.diff_computing_time += dif_evt.profile.end - dif_evt.profile.start
 
         # Применяем оператор дисперсии
-        self.ocl.linear_prg.Disp(self.ocl.queue, self.field_shape, None,
-                                 self.K_buf, self.field_buf, self.current_dz, self.grid.space_size, self.grid.time_size)
+        disp_evt = self.ocl.linear_prg.Disp(self.ocl.queue, self.field_shape, None,
+                                            self.K_buf, self.field_buf, self.current_dz, self.grid.space_size,
+                                            self.grid.time_size)
+        disp_evt.wait()
+        self.disp_computing_time += disp_evt.profile.end - disp_evt.profile.start
 
         # Прямое преобразование Фурье
         self.plan1D.execute(self.field_buf, batch=self.grid.space_size, inverse=False)
 
     def nonlinear(self):
-        if Settings.use_raman:
-            # Реализовать позже...
-            raise Exception("Не реализовано")
-        elif Settings.use_cubic:
+        if Settings.use_cubic:
             dt = self.grid.time_delta[1]
             k = numpy.float64(self.physConst.G * self.current_dz / dt / 24.0)
             max_error = numpy.float64(1e-6)
             iteration = numpy.int32(0)
 
-            # test_complex = numpy.zeros((self.grid.space_size, self.grid.time_size), dtype=numpy.complex128)
-            # test_real = numpy.zeros((self.grid.space_size, self.grid.time_size), dtype=numpy.float64)
-            # cl.enqueue_copy(self.ocl.queue, test_complex, self.field_buf)
-            # cl.enqueue_copy(self.ocl.queue, test_complex, self.field_buf)
-            self.ocl.nonlinear_prg.ComplexToDouble(self.ocl.queue, self.field_shape, None,
-                                                   self.field_buf, self.field_buf_real,
-                                                   self.grid.space_size, self.grid.time_size)
-
             evt = self.ocl.nonlinear_prg.CubicUnlinean1DSolve(self.ocl.queue, (self.grid.space_size, 1), None,
-                                                        self.field_buf_real, self.e_next_buf, self.e_05_buf,
-                                                        self.unlinear_iterations_buf,
-                                                        k, dt, max_error, iteration, self.grid.time_size)
-            evt.wait()
-            print evt.profile.end - evt.profile.start
-            cl.enqueue_copy(self.ocl.queue, self.unlinear_iterations, self.unlinear_iterations_buf)
+                                                              self.field_buf, self.unlinear_iterations_buf,
+                                                              k, dt, max_error, iteration, self.grid.time_size)
 
+            evt.wait()
+            self.nlnr_computing_time += evt.profile.end - evt.profile.start
+
+            cl.enqueue_copy(self.ocl.queue, self.unlinear_iterations, self.unlinear_iterations_buf)
             self.global_iteration_number = numpy.ndarray.max(self.unlinear_iterations)
 
-            # self.ocl.prg.FindMaxIteration(self.ocl.queue, (1,), None, self.grid.space_size,
-            #                              self.global_iteration_number_buf, self.unlinear_iterations_buf)
-            #
-            # cl.enqueue_copy(self.ocl.queue, test_real, self.field_buf_real)
-
-            self.ocl.nonlinear_prg.DoubleToComplex(self.ocl.queue, self.field_shape, None,
-                                                   self.field_buf, self.field_buf_real,
-                                                   self.grid.space_size, self.grid.time_size)
-
     def copyFromBuffer(self, field):
-        cl.enqueue_copy(self.ocl.queue, field, self.field_buf)
+        evt = cl.enqueue_copy(self.ocl.queue, field, self.field_buf)
+        evt.wait()
+        self.copy_computing_time += evt.profile.end - evt.profile.start

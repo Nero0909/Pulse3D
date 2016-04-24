@@ -3,7 +3,7 @@
 #elif defined(cl_amd_fp64)
     #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #else
-    #error "Double precision floating point not supported by OpenCL implementation."
+    #error "Double precision floating point not supported by this OpenCL device."
 #endif
 
 #define PYOPENCL_DEFINE_CDOUBLE
@@ -30,8 +30,6 @@ double dz, int S, int N)
     double imag = cdouble_imag(Field[ind]);
 
     Field[ind] = (cdouble_t)(re * CosK - imag * SinK, re * SinK + imag * CosK);
-
-    //Field[ind] = cdouble_mul(Field[ind], cdouble_exp(-K[ind % N]*dz));
 }
 
 __kernel void Diff(
@@ -46,17 +44,14 @@ int S, int N, double dz)
 {
     int x = get_global_id(0);
 
-    cdouble_t ac[256];
-    cdouble_t bc[256];
-    cdouble_t gc[256];
-    cdouble_t B[256];
-    //cdouble_t E[256];
+    cdouble_t ac[#space_size#];
+    cdouble_t bc[#space_size#];
+    cdouble_t gc[#space_size#];
+    cdouble_t B[#space_size#];
 
     cdouble_t C = (cdouble_t)(0, D[x] * dz);
-
     cdouble_t k = C;
 
-    //E[0] = Field[x];
     B[0] = cdouble_rmul( 2.0 , cdouble_divider( cdouble_add(Field[x + N], -Field[x]) , (r[1] * r[1]) ) );
     B[S-1] = (cdouble_t)(0,0);
 
@@ -66,7 +61,6 @@ int S, int N, double dz)
 
     for(int i = 1; i < S; i++)
     {
-
         if(i < S-1)
         {
             B[i] = (cdouble_t)(
@@ -94,16 +88,4 @@ int S, int N, double dz)
     {
         Field[x + N*i] = cdouble_divide( (bc[i] - cdouble_mul( cdouble_mulr(k, A3[i]) , Field[x + N*(i+1)]) ) , ac[i]);
     }
-}
-
-__kernel void Conj(
-__global cdouble_t* Field,
-int S)
-{
-    int x = get_local_id(0)+get_group_id(0)*get_local_size(0);
-    int y = get_local_id(1)+get_group_id(1)*get_local_size(1);
-
-    int ind = x + y*S;
-
-    Field[ind] = cdouble_conj(Field[ind]);
 }

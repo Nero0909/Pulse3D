@@ -21,13 +21,11 @@ class Graph():
             self.SSym[self.grid.space_size + j] = self.grid.space_grid[j]
             self.SSym[self.grid.space_size - 1 - j] = -self.grid.space_grid[j]
 
-
     def plot3D(self, title = ''):
         s = mlab.surf(self.SSym / Settings.x_width, self.T, self.fieldSym.real, warp_scale="auto")
         if title != '':    
            mlab.title(title, height = 0.1, size = 0.4)
         mlab.show()
-
 
     def plot2D(self, field):
         fig = plt.figure()

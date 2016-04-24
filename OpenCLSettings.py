@@ -1,9 +1,12 @@
 import pyopencl as cl
+from Grid import Grid
 from Singleton import Singleton
 
 @Singleton
 class OpenCLSettings:
     def __init__(self):
+        self.grid = Grid.Instance()
+
         # Obtain an OpenCL platform.
         self.platform = cl.get_platforms()[0]
 
@@ -23,6 +26,10 @@ class OpenCLSettings:
             linear_kernels = f.read()
         with open('Kernels\InitialDataKernels.cl') as f:
             initial_kernels = f.read()
+
+        # Inject space an time sizes into kernels
+        linear_kernels = linear_kernels.replace("#space_size#", str(self.grid.space_size))
+        nonlinear_kernels = nonlinear_kernels.replace("#time_size#", str(self.grid.time_size))
 
         # Compile program
         self.initial_prg = cl.Program(self.ctx, initial_kernels).build()

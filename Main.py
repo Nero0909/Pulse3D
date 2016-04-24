@@ -1,5 +1,3 @@
-__author__ = 'Nero'
-
 import os
 import numpy
 import time
@@ -9,6 +7,17 @@ from GaussDistribution import Gauss
 from Plot import Graph
 from Grid import Grid
 from ComputationalContext import ComputationalContext
+
+
+def print_profile_info(context):
+    print ("Profiling info:")
+    print("----------------")
+    print("Nonlinear computing time: {0} seconds".format(context.nlnr_computing_time / 10**9))
+    print("Dispersion computing time: {0} seconds".format(context.disp_computing_time / 10**9))
+    print("Difraction computing time: {0} seconds".format(context.diff_computing_time / 10**9))
+    print("Copy from buffer time: {0} seconds".format(context.copy_computing_time / 10**9))
+    print("Number of layers: {0}".format(context.layer))
+    print("----------------")
 
 
 def doSteps(context):
@@ -40,10 +49,11 @@ def main():
         t = time.time()
 
         doSteps(context)
-        print context.layer
-
         context.copyFromBuffer(field)
-        print time.time() - t
+
+        print_profile_info(context)
+        print("Total time: {0} s".format(time.time() - t))
+
         graph = Graph(field)
         graph.plot3D()
 
