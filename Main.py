@@ -7,17 +7,7 @@ from GaussDistribution import Gauss
 from Plot import Graph
 from Grid import Grid
 from ComputationalContext import ComputationalContext
-
-
-def print_profile_info(context):
-    print ("Profiling info:")
-    print("----------------")
-    print("Nonlinear computing time: {0} seconds".format(context.nlnr_computing_time / 10**9))
-    print("Dispersion computing time: {0} seconds".format(context.disp_computing_time / 10**9))
-    print("Difraction computing time: {0} seconds".format(context.diff_computing_time / 10**9))
-    print("Copy from buffer time: {0} seconds".format(context.copy_computing_time / 10**9))
-    print("Number of layers: {0}".format(context.layer))
-    print("----------------")
+from Statistic import Statistic
 
 
 def doSteps(context):
@@ -29,7 +19,7 @@ def main():
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
 
     onlyPlot = False
-    deserializer = Deserializer('LBProjects/adaptive_full')
+    deserializer = Deserializer('LBProjects/nonl_uni')
     deserializer.deserialize(Settings)
     Settings.toFemtoseconds()
 
@@ -42,17 +32,22 @@ def main():
     context = ComputationalContext(field)
     context.fillData()
 
+    statistic = Statistic()
+
     if (onlyPlot):
-        lBulletGraph = Graph(fieldxtxt)
+        lBulletGraph = Graph(nonl_unitxt)
         lBulletGraph.plot3D()
     else:
-        t = time.time()
+        statistic.set_start_time()
 
         doSteps(context)
         context.copyFromBuffer(field)
 
-        print_profile_info(context)
-        print("Total time: {0} s".format(time.time() - t))
+        statistic.set_end_time()
+        statistic.print_profile_info(context)
+        statistic.print_total_time()
+        
+        #statistic.print_error(nonl_unitxt, field)
 
         graph = Graph(field)
         graph.plot3D()

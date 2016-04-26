@@ -21,7 +21,6 @@ class ComputationalContext:
 
         self.layer = numpy.int32(0)
 
-        # Distance
         self.Z = numpy.int32(0)
         self.z_limit = Settings.z
         self.dz = Settings.dz
@@ -52,9 +51,6 @@ class ComputationalContext:
         self.space_delta_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.grid.space_delta)
         self.plan1D = Plan(self.grid.time_size, dtype=numpy.complex128, queue=self.ocl.queue)
         self.field_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=field)
-        self.field_buf_real = cl.Buffer(self.ocl.ctx, mf.READ_WRITE, field.real.nbytes)
-        self.e_next_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.E_next)
-        self.e_05_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.E_next)
         # self.global_iteration_number_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE, self.global_iteration_number.nbytes)
         self.unlinear_iterations_buf = cl.Buffer(self.ocl.ctx, mf.READ_WRITE, self.unlinear_iterations.nbytes)
 
@@ -107,8 +103,8 @@ class ComputationalContext:
             self.current_dz = 0
 
     def doStep(self, dz):
-        iteration_number = 0
 
+        iteration_number = 0
         while True:
             if dz < 0:
                 self.calculated_dz = self.z_step_strategy.calculateDz(self.calculated_dz, self.global_iteration_number)
@@ -131,11 +127,10 @@ class ComputationalContext:
     def linear(self):
         # Обратное преобразование Фурье
         self.plan1D.execute(self.field_buf, batch=self.grid.space_size, inverse=True)
-        # self.ocl.prg.Conj(self.ocl.queue, self.field_shape, None,  self.field_buf, self.grid.space_size)
 
         if Settings.use_difraction:
             # Применяем оператор дифракции
-            dif_evt = self.ocl.linear_prg.Diff(self.ocl.queue, (self.grid.time_size, 1), None,
+            dif_evt = self.ocl.linear_prg.Diff(self.ocl.queue, (self.grid.time_size, ), None,
                                                self.field_buf, self.A1_buf, self.A2_buf, self.A3_buf,
                                                self.space_buf, self.space_delta_buf, self.D_buf,
                                                self.grid.space_size, self.grid.time_size, self.current_dz)

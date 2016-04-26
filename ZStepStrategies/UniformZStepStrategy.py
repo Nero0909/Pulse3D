@@ -6,7 +6,7 @@ class UniformZStepStrategy:
         self.uniform_dz = Settings.dz
         self.iterations = 0
 
-    def calculateDz(self, current_dz):
+    def calculateDz(self, current_dz, iteration_number):
         if current_dz < 0:
             current_dz = self.uniform_dz
 
