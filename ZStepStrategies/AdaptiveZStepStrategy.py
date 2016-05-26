@@ -13,39 +13,41 @@ class AdaptiveZStepStrategy:
         self.layer_number = Settings.layer_number
         self.layer_count = 0
 
-    def calculateDz(self, current_dz, iteration_number):
-        if self.needUpdateDz(iteration_number):
+    def calculate_dz(self, current_dz, iteration_number, errors):
+        if self.need_update_dz(iteration_number, errors):
             if current_dz < 0:
                 current_dz = self.adaptive_dz
 
-            if self.needIncreaseDz():
+            if self.need_increase_dz():
                 current_dz *= 1.5
 
-            if self.needDecreaseDz(iteration_number):
+            if self.need_decrease_dz(iteration_number, errors):
                 current_dz /= 2.0
-            self.resetStatistic()
+            self.reset_statistic()
         else:
             if self.layer_count == self.layer_number:
-                self.resetStatistic()
+                self.reset_statistic()
 
             self.layer_count += 1
             self.max_iteration_number = max(self.max_iteration_number, iteration_number)
+            self.max_error = max(self.max_error, errors)
 
         return current_dz
 
-    def needUpdateDz(self, iteration_number):
-        return self.needIncreaseDz() or self.needDecreaseDz(iteration_number)
+    def need_update_dz(self, iteration_number, errors):
+        return self.need_increase_dz() or\
+               self.need_decrease_dz(iteration_number, errors)
 
-    def needIncreaseDz(self):
+    def need_increase_dz(self):
         if self.layer_count == self.layer_number:
-            return self.max_iteration_number < self.possible_iteration_number or self.max_error < self.possible_error / 2.0
+            return self.max_iteration_number < self.possible_iteration_number and\
+                   self.max_error < self.possible_error / 2.0
         return False
 
-    def needDecreaseDz(self, iteration_number):
-        return iteration_number > self.possible_iteration_number
+    def need_decrease_dz(self, iteration_number, errors):
+        return iteration_number > self.possible_iteration_number or errors > self.possible_error
 
-    def resetStatistic(self):
+    def reset_statistic(self):
         self.layer_count = 0
         self.max_iteration_number = -sys.maxint - 1
         self.max_error = sys.float_info.min
-

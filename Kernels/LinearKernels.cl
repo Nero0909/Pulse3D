@@ -8,7 +8,6 @@
 
 #define PYOPENCL_DEFINE_CDOUBLE
 #include "pyopencl-complex.h"
-#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 
 __kernel void Disp(

@@ -32,10 +32,25 @@ class Graph():
         fig.suptitle('ES and ET')
         ax = fig.add_subplot(1, 2, 2)
         plt.plot(self.T[0, :], field.real[0, :])
-
         ax = fig.add_subplot(1, 2, 1)
-        maxArg = field.real.argmax(axis=1)[0]
-        minArg = field.real.argmin(axis=1)[0]
-        plt.plot(self.grid.space_grid / Settings.x_width, field.real[:, maxArg])
-        plt.plot(self.grid.space_grid / Settings.x_width, field.real[:, minArg])
-        plt.show()
+        plt.plot(self.T[self.grid.space_size-1, :], field.real[self.grid.space_size-1, :])
+    
+    def plot2DCompare(self, computing_field, lbullet_field, layer):
+        fig = plt.figure()
+        fig.suptitle('Layer {0}'.format(layer))
+        
+        ax1 = fig.add_subplot(2, 1, 1)
+        ax1.plot(self.T[0, :], computing_field.real[0, :], label="Computing field")
+        ax1.plot(self.T[0, :], lbullet_field.real[0, :], label="Lbullet field")
+        ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=9, ncol=2, mode="expand", borderaxespad=0.)
+
+        ax2 = fig.add_subplot(2, 1, 2)
+        ax2.plot(self.T[0, :], computing_field.real[0, :])
+        ax2.plot(self.T[0, :], lbullet_field.real[0, :])
+        
+#        ax = fig.add_subplot(1, 2, 1)
+#        maxArg = field.real.argmax(axis=1)[0]
+#        minArg = field.real.argmin(axis=1)[0]
+#        plt.plot(self.grid.space_grid / Settings.x_width, field.real[:, maxArg])
+#        plt.plot(self.grid.space_grid / Settings.x_width, field.real[:, minArg])
+#        plt.show()

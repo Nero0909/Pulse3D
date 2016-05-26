@@ -10,16 +10,16 @@ from ComputationalContext import ComputationalContext
 from Statistic import Statistic
 
 
-def doSteps(context):
-    while not context.isStop():
-        context.doStep(-1)
+def do_steps(context):
+    while not context.is_stop():
+        context.do_step(-1)
 
 
 def main():
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
 
     onlyPlot = False
-    deserializer = Deserializer('LBProjects/nonl_uni')
+    deserializer = Deserializer('LBProjects/test_1024_64_bi')
     deserializer.deserialize(Settings)
     Settings.toFemtoseconds()
 
@@ -30,27 +30,29 @@ def main():
     gauss.fillField(field)
 
     context = ComputationalContext(field)
-    context.fillData()
+    context.fill_data()
 
     statistic = Statistic()
 
     if (onlyPlot):
-        lBulletGraph = Graph(nonl_unitxt)
-        lBulletGraph.plot3D()
+        lBulletGraph = Graph(fieldxtxt)
+        #lBulletGraph.plot2D(big_intenstxt)
+        #lBulletGraph.plot3D()
     else:
         statistic.set_start_time()
 
-        doSteps(context)
-        context.copyFromBuffer(field)
+        do_steps(context)
+        context.copy_from_buffer(field)
 
         statistic.set_end_time()
         statistic.print_profile_info(context)
         statistic.print_total_time()
         
-        #statistic.print_error(nonl_unitxt, field)
+        #statistic.print_error(fieldxtxt, field)
 
         graph = Graph(field)
         graph.plot3D()
+        #graph.plot2DCompare(field, fieldxtxt, 63)
 
 
 if __name__ == '__main__':
